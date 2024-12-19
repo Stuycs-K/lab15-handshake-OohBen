@@ -11,7 +11,13 @@
   =========================*/
 int server_setup() {
   int from_client = 0;
-  return from_client;
+      if (mkfifo("elpipe", 0666) == -1) {
+        perror("mkfifo");
+        exit(-1);
+    }
+    int fd = open("elpipe",O_RDWR|O_TRUNC);
+    int buf = -1;
+    read(fd,&buf,sizeof(buf));
 }
 
 /*=========================
