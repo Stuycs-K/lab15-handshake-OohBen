@@ -10,15 +10,16 @@
   returns the file descriptor for the upstream pipe.
   =========================*/
 int server_setup() {
-  int from_client = 0;
-      if (mkfifo("elpipe", 0666) == -1) {
-        perror("mkfifo");
-        exit(-1);
-    }
-    int fd = open("elpipe",O_RDWR|O_TRUNC);
-    int buf = -1;
-    read(fd,&buf,sizeof(buf));
+    int from_client;
+    mkfifo(WKP, 0666);
+    printf("[server] created WKP\n");
+    from_client = open(WKP, O_RDONLY);
+    printf("[server] opened WKP\n");
+    remove(WKP);
+    printf("[server] removed WKP\n");  
+    return from_client;
 }
+
 
 /*=========================
   server_handshake 
@@ -31,6 +32,23 @@ int server_setup() {
   =========================*/
 int server_handshake(int *to_client) {
   int from_client;
+  char buffer[HANDSHAKE_BUFFER_SIZE];
+  from_client = server_setup();
+  read(from_client, buffer, HANDSHAKE_BUFFER_SIZE);
+  printf("[server] received private pipe name: %s\n", buffer);
+  *to_client = open(buffer, O_WRONLY);
+  printf("[server] opened private pipe\n");
+  int rand_num = rand();
+  write(*to_client, &rand_num, sizeof(int));
+  printf("[server] wrote to private pipe\n");
+  int response;
+  read(from_client, &response, sizeof(int));
+  printf("[server] received response: %d\n", response);
+  if (response != rand_num+1) {
+    printf("[server] handshake failed\n");
+    return -1;
+  }
+  printf("[server] handshake successful\n");
   return from_client;
 }
 
