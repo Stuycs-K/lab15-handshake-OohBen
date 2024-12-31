@@ -63,10 +63,35 @@ int server_handshake(int *to_client) {
   returns the file descriptor for the downstream pipe.
   =========================*/
 int client_handshake(int *to_server) {
-  int from_server;
-  return from_server;
+   int from_server;
+   char buffer[HANDSHAKE_BUFFER_SIZE];
+   
+   sprintf(buffer, "%d", getpid());
+   mkfifo(buffer, 0666);
+   printf("[client] created private pipe\n");
+   
+   *to_server = open(WKP, O_WRONLY);
+   printf("[client] opened WKP\n");
+   
+   write(*to_server, buffer, HANDSHAKE_BUFFER_SIZE);
+   printf("[client] wrote to WKP\n");
+   
+   from_server = open(buffer, O_RDONLY);
+   printf("[client] opened private pipe\n");
+   
+   int rand_num;
+   read(from_server, &rand_num, sizeof(int));
+   printf("[client] got random number: %d\n", rand_num);
+   
+   int response = rand_num + 1;
+   write(*to_server, &response, sizeof(int));
+   printf("[client] sent response\n");
+   
+   remove(buffer);
+   printf("[client] removed private pipe\n");
+   
+   return from_server;
 }
-
 
 /*=========================
   server_connect
