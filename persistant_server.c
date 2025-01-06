@@ -1,108 +1,46 @@
 #include "pipe_networking.h"
-//UPSTREAM = to the server / from the client
-//DOWNSTREAM = to the client / from the server
-/*=========================
-  server_setup
+#include <signal.h>
+#include <time.h>
 
-  creates the WKP and opens it, waiting for a  connection.
-  removes the WKP once a connection has been made
-
-  returns the file descriptor for the upstream pipe.
-  =========================*/
-int server_setup() {
-    int from_client;
-    mkfifo(WKP, 0666);
-    printf("[server] created WKP\n");
-    from_client = open(WKP, O_RDONLY);
-    printf("[server] opened WKP\n");
+void sighandler(int signo)
+{
+  if (signo == SIGINT)
+  {
     remove(WKP);
-    printf("[server] removed WKP\n");  
-    return from_client;
-}
-
-
-/*=========================
-  server_handshake 
-  args: int * to_client
-
-  Performs the server side pipe 3 way handshake.
-  Sets *to_client to the file descriptor to the downstream pipe (Client's private pipe).
-
-  returns the file descriptor for the upstream pipe (see server setup).
-  =========================*/
-int server_handshake(int *to_client) {
-  int from_client;
-  char buffer[HANDSHAKE_BUFFER_SIZE];
-  from_client = server_setup();
-  read(from_client, buffer, HANDSHAKE_BUFFER_SIZE);
-  printf("[server] received private pipe name: %s\n", buffer);
-  *to_client = open(buffer, O_WRONLY);
-  printf("[server] opened private pipe\n");
-  int rand_num = rand();
-  write(*to_client, &rand_num, sizeof(int));
-  printf("[server] wrote to private pipe\n");
-  int response;
-  read(from_client, &response, sizeof(int));
-  printf("[server] received response: %d\n", response);
-  if (response != rand_num+1) {
-    printf("[server] handshake failed\n");
-    return -1;
+    exit(0);
   }
-  printf("[server] handshake successful\n");
-  return from_client;
 }
 
+int main()
+{
+  signal(SIGINT, sighandler);
+  srand(time(NULL));
 
-/*=========================
-  client_handshake
-  args: int * to_server
+  while (1)
+  {
+    printf("\nWaiting for the client to connect\n");
+    mkfifo(WKP, 0644);
+    int to_client;
+    int from_client = server_handshake(&to_client);
 
-  Performs the client side pipe 3 way handshake.
-  Sets *to_server to the file descriptor for the upstream pipe.
+    if (from_client != -1)
+    {
+      while (1)
+      {
+        int random_num = rand() % 101;
+        printf("Sent: %d\n", random_num);
+        if (write(to_client, &random_num, sizeof(int)) != -1)
+        {
+          printf("Client disconnected ):\n");
+          break;
+        }
+        sleep(1);
+      }
+    }
 
-  returns the file descriptor for the downstream pipe.
-  =========================*/
-int client_handshake(int *to_server) {
-   int from_server;
-   char buffer[HANDSHAKE_BUFFER_SIZE];
-   
-   sprintf(buffer, "%d", getpid());
-   mkfifo(buffer, 0666);
-   printf("[client] created private pipe\n");
-   
-   *to_server = open(WKP, O_WRONLY);
-   printf("[client] opened WKP\n");
-   
-   write(*to_server, buffer, HANDSHAKE_BUFFER_SIZE);
-   printf("[client] wrote to WKP\n");
-   
-   from_server = open(buffer, O_RDONLY);
-   printf("[client] opened private pipe\n");
-   
-   int rand_num;
-   read(from_server, &rand_num, sizeof(int));
-   printf("[client] got random number: %d\n", rand_num);
-   
-   int response = rand_num + 1;
-   write(*to_server, &response, sizeof(int));
-   printf("[client] sent response\n");
-   
-   remove(buffer);
-   printf("[client] removed private pipe\n");
-   
-   return from_server;
-}
-
-/*=========================
-  server_connect
-  args: int from_client
-
-  handles the subserver portion of the 3 way handshake
-
-  returns the file descriptor for the downstream pipe.
-  =========================*/
-int server_connect(int from_client) {
-  int to_client = 0;
-  
-  return to_client;
+    close(from_client);
+    close(to_client);
+    remove(WKP);
+  }
+  return 0;
 }
