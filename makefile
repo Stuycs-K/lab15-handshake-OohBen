@@ -1,17 +1,24 @@
-all: client server persistant_server forking_server
+.PHONY: all compile client-comp server-comp server client persistant_server forking_server-comp clean
+all: client-comp server-comp persistant_server forking_server
 
-compile: client server persistant_server forking_server
+compile: client-comp server-comp persistant_server forking_server-comp
 
-client: basic_client.o pipe_networking.o
+client-comp: basic_client.o pipe_networking.o
 	gcc -o client basic_client.o pipe_networking.o
 
-server: basic_server.o pipe_networking.o
+server-comp: basic_server.o pipe_networking.o
 	gcc -o server basic_server.o pipe_networking.o
+
+server:
+	./forking_server
+
+client:
+	./client
 
 persistant_server: persistant_server.o pipe_networking.o
 	gcc -o persistant_server persistant_server.o pipe_networking.o
 
-forking_server: forking_server.o pipe_networking.o
+forking_server-comp: forking_server.o pipe_networking.o
 	gcc -o forking_server forking_server.o pipe_networking.o
 
 basic_client.o: basic_client.c pipe_networking.h
