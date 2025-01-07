@@ -101,7 +101,22 @@ int client_handshake(int *to_server) {
 
   returns the file descriptor for the downstream pipe.
   =========================*/
-int server_connect(int from_client) { //ONLY IN SUBSERVER NEEDED
-  int to_client = 0;
-  return to_client;
+int server_handshake_half(int *to_client, int from_client) {
+  char buffer[HANDSHAKE_BUFFER_SIZE];
+  read(from_client, buffer, HANDSHAKE_BUFFER_SIZE);
+  printf("[subserver] received private pipe name: %s\n", buffer);
+  *to_client = open(buffer, O_WRONLY);
+  printf("[subserver] opened private pipe\n");
+  int rand_num = rand();
+  write(*to_client, &rand_num, sizeof(int));
+  printf("[subserver] wrote to private pipe\n");
+  int response;
+  read(from_client, &response, sizeof(int));
+  printf("[subserver] received response: %d\n", response);
+  if (response != rand_num+1) {
+    printf("[subserver] handshake failed\n");
+    return -1;
+  }
+  printf("[subserver] handshake successful\n");
+  return from_client;
 }
