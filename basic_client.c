@@ -24,7 +24,7 @@ int main()
     {
         int num;
         int r = read(from_server, &num, sizeof(int));
-        if (r == -1)
+        if (r <= 0)
         {
             printf("[client] server disconnected ):n");
             break;
